@@ -73,16 +73,16 @@ class CLI:
         if not self.conf["Setup"]["license_accepted"] == "true":
             license_text = input(f"""{Fore.WHITE}
 GPL License Agreement for Porn Fetch
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License,[...]
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General [...]
 You should have received a copy of the GNU General Public License along with this program. If not, see https://www.gnu.org/licenses/.
 NO LIABILITY FOR END USER USE
-Under no circumstances and under no legal theory, whether in tort, contract, or otherwise, shall the copyright holder or contributors be liable to You for any direct, indirect, special, incidental, consequential or exemplary damages of any character including, without limitation, damages for loss of goodwill, work stoppage, computer failure or malfunction, loss of data or any and all other commercial damages or losses, even if such party shall have been informed of the possibility of such damages.
-This limitation of liability shall not apply to liability for death or personal injury resulting from such party’s negligence to the extent applicable law prohibits such limitation. Some jurisdictions do not allow the exclusion or limitation of incidental or consequential damages, so this exclusion and limitation may not apply to You.
+Under no circumstances and under no legal theory, whether in tort, contract, or otherwise, shall the copyright holder or contributors be liable to You for any direct, indirect, special, incidental, co[...]
+This limitation of liability shall not apply to liability for death or personal injury resulting from such party’s negligence to the extent applicable law prohibits such limitation. Some jurisdictio[...]
 This Agreement represents the complete agreement concerning the subject matter hereof.
 
 Disclaimer:
-Porn Fetch is NOT associated with any of the websites. Using this tool is against the ToS of every website. Usage of Porn Fetch is at your own risk. I (the developer) am not liable for any of your actions. This tool is not meant to be used for mass downloading content from websites or downloading copyright protected material.
+Porn Fetch is NOT associated with any of the websites. Using this tool is against the ToS of every website. Usage of Porn Fetch is at your own risk. I (the developer) am not liable for any of your act[...]
 
 Information:
 Porn Fetch uses ffmpeg for video processing / converting. FFmpeg is free software licensed under the GPL license.
@@ -363,9 +363,6 @@ Do you want to use FFmpeg? [yes,no]
             print(f"{idx}) - {video.title}")
             videos.append(video)
 
-            if idx >= self.result_limit:
-                break
-
         print(f"Videos loaded: {len(videos)}")
 
         if not auto:
@@ -384,13 +381,11 @@ Do you want to use FFmpeg? [yes,no]
 
             self.total_segments = sum(
                 [len(list(video.get_segments(quality=self.quality))) for video in videos if
-                 hasattr(video, 'get_segments')])
+                hasattr(video, 'get_segments')])
             logger.debug(f"Got segments: {self.total_segments}")
 
             self.to_be_downloaded = len(videos)
-
-            for video in videos:
-                self.process_video_with_error_handling(video, batch, ignore_errors)
+            self.download_in_batches(videos, batch, ignore_errors)
         else:
             selected_videos = vids.split(",")
             videos_ = []
@@ -399,13 +394,21 @@ Do you want to use FFmpeg? [yes,no]
 
             self.total_segments = sum(
                 [len(list(video.get_segments(quality=self.quality))) for video in videos_ if
-                 hasattr(video, 'get_segments')])
+                hasattr(video, 'get_segments')])
 
             self.to_be_downloaded = len(selected_videos)
-            for number in selected_videos:
-                video = videos[int(number)]
-                self.process_video_with_error_handling(video, batch, ignore_errors)
+            self.download_in_batches(videos_, batch, ignore_errors)
 
+    def download_in_batches(self, videos, batch, ignore_errors):
+        for i in range(0, len(videos), 10):
+            batch_videos = videos[i:i + 10]
+            threads = []
+            for video in batch_videos:
+                thread = threading.Thread(target=self.process_video_with_error_handling, args=(video, batch, ignore_errors))
+                threads.append(thread)
+                thread.start()
+            for thread in threads:
+                thread.join()
 
     def process_model(self, url=None, do_return=False, auto=False, ignore_errors=False, batch=False):
         if url is None:
@@ -424,281 +427,4 @@ Do you want to use FFmpeg? [yes,no]
             model = itertools.chain(Client().get_user(model).videos, Client().get_user(model).uploads)
 
         elif hqporner_pattern.match(model):
-            model = hq_Client().get_videos_by_actress(model)
-
-        elif xvideos_pattern.match(model):
-            model = xv_Client().get_pornstar(model).videos
-
-        if do_return:
-            return model
-
-        self.iterate_generator(model, auto=auto, ignore_errors=ignore_errors, batch=batch)
-
-    def process_playlist(self, url=None, auto=False, ignore_errors=False, batch=False):
-        if url is None:
-            url = input(f"{return_color()}Enter the (PornHub) playlist URL -->:")
-        playlist = Client().get_playlist(url)
-        print(f"{return_color()}Processing: {playlist.title}")
-        self.iterate_generator(playlist.sample(), auto=auto, ignore_errors=ignore_errors, batch=batch)
-
-    def search_videos(self):
-        website = input(f"""
-{return_color()}Please select the website to search on:
-
-{return_color()}1) PornHub
-{return_color()}2) HQPorner
-{return_color()}3) XVideos
-{return_color()}4) XNXX
-{return_color()}5) Eporner
-{return_color()}----------->:""")
-        query = input(f"{return_color()}Please enter the search query -->:")
-
-        if website == "1":
-            self.iterate_generator(Client().search(query))
-
-        elif website == "2":
-            self.iterate_generator(hq_Client().search_videos(query=query))
-
-        elif website == "3":
-            self.iterate_generator(xv_Client().search(query))
-
-        elif website == "4":
-            self.iterate_generator(xn_Client().search(query).videos)
-
-        elif website == "5":
-            self.iterate_generator(ep_Client().search_videos(query, per_page=self.result_limit,
-                                                             sorting_order="", sorting_gay="", sorting_low_quality="",
-                                                             enable_html_scraping=True, page=1))
-
-    def process_file(self):
-        videos = []
-        models = []
-        objects = []
-        file = input(f"{return_color()}Please enter the file path -->:")
-
-        with open(file, "r") as file:
-            content = file.read()
-            content = content.splitlines()
-
-        for line in content:
-            if line.startswith("model#"):
-                line = line.split("#")[1]
-                models.append(self.process_model(url=line, do_return=True))
-
-            else:
-                videos.append(line)
-
-        logger.debug(f"{return_color()}Processing Models / Videos...")
-        for video in videos:
-            objects.append(check_video(video))
-
-        for video in models:
-            objects.append(video)
-
-        logger.debug(f"{return_color()}Done!")
-        self.iterate_generator(objects)
-
-    def download(self, video, output_path, task):
-        try:
-            def callback_wrapper(pos, total):
-                self.progress_queue.put((task, pos, total))
-                self.downloaded_segments += 1
-                # This shit took me over 7 hours!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                # Making this stupid thing thread safe was the most exhausting thing in my entire life :skull:
-
-
-            if isinstance(video, Video):
-                video.download(path=output_path, quality=self.quality, downloader=self.threading_mode,
-                               display=callback_wrapper)
-
-            elif isinstance(video, ep_Video) or isinstance(video, hq_Video):
-                video.download(path=output_path, quality=self.quality, no_title=True, callback=Callback.text_progress_bar)
-
-            else:
-                video.download(downloader=self.threading_mode, path=output_path, no_title=True, quality=self.quality,
-                               callback=callback_wrapper)
-
-        finally:
-            logger.debug(f"{return_color()}Finished downloading for: {video.title}")
-            if self.ffmpeg_features:
-                os.rename(f"{output_path}", f"{output_path}_.tmp")
-                cmd = [self.ffmpeg_path, "-i", f"{output_path}_.tmp", "-c", "copy", output_path, '-hide_banner',
-                       '-loglevel', 'error']
-                ff = FfmpegProgress(cmd)
-                for progress in ff.run_command_with_progress():
-                    logger.debug(f"Converting progress: {progress}")
-
-                os.remove(f"{output_path}_.tmp")
-                write_tags(path=output_path, data=load_video_attributes(video))
-            else:
-                logger.debug("FFMPEG features disabled, writing tags and converting the video won't be available!")
-
-            self.progress_queue.put(None)
-            self.finished_downloading += 1
-            self.semaphore.release()
-
-
-    def _update_progress(self):
-        # This method reads from the queue and updates the progress bar
-        while True:
-            try:
-                task, pos, total = self.progress_queue.get()
-
-            except TypeError: # Stupid implementation I know
-                break
-
-            # Update progress bar based on queue data
-            self.progress.update(task, advance=pos - self.progress.tasks[task].completed, total=total)
-            self.progress.update(task_id=self.task_total_progres,
-                                 advance=self.downloaded_segments - self.progress.tasks[self.task_total_progres].completed,
-                                 total=self.total_segments,
-                                 description=f"Total progress | Downloaded: {self.finished_downloading}|{self.to_be_downloaded} videos")
-            self.progress.refresh()  # Force a screen update after each progress change
-
-
-
-
-    @staticmethod
-    def credits():
-        content = BaseCore().fetch("https://raw.githubusercontent.com/EchterAlsFake/Porn_Fetch/master/README/CREDITS.md")
-        md = Markdown(content)
-        rprint(md)
-
-
-class Batch(CLI):
-    def __init__(self):
-        super().__init__()
-        self.conf = ConfigParser()
-        self.conf.read("config.ini")
-        self.main()
-
-    def main(self):
-            description = """
-Porn Fetch CLI - Download Porn from your terminal / batch processing
-
-Disclaimer:
-I strictly forbid you to mass-scrape content from other sites. I do not encourage this in any way. If you use this tool
-to redistribute copyright protected content, you are responsible for your actions. I am not liable for any damages caused!
-
-CLI GUIDE (Please read this if it's your first time)
-
-1.
-All options like --url; --playlist; ... can be put together. Porn Fetch will process all of your inputs starting from 
-a URL. a URL given with '--url' will download a single video. If you put a URL and a Playlist at the same time,
-Porn Fetch will start downloading the single video from '--url' and then continue with the videos from the submitted
-playlist. 
-
-2. 
-You can give a lot of options from the configuration file manually into the CLI. This allows for a lot of flexibility.
-If you don't give any of the options Porn Fetch will attempt to read from an existing 'config.ini' file. 
-If neither a configuration file is found nor you provided any options manually, Porn Fetch will create a 'config.ini' 
-file which you can use in the next run. Please use this file to change your options accordingly. 
-I do not want to implement all options as a command line option as it would be too much work for such a small thing. 
-If you wanna implement it, feel free to PR lol
-
-
-Here are the options:
-
-OPTION            | TYPE  | DESCRIPTION
---url             | (str) | A video URL
---model           | (str) | A model URL
---playlist        | (str) | A playlist URL
---quality         | (str) | The quality of the videos [best, half, worst] > Default: best
---output          | (str) | The path to a folder where to save the downloaded videos. > Default: current directory (./) 
---threading_mode  | (str) | The threading mode (backend, how to download the videos) [threaded,ffmpeg,default]
-                            Note: The threading mode 'ffmpeg' requires ffmpeg installed in your path!
-
---auto_process    | (bool) | Whether to automatically download all videos from playlists, files, models or ask you 
-                             to select a range of videos
-
-
-Note:
-By using the CLI batch mode you automatically accept the GPLv3 License of Porn Fetch!
-        """
-
-            parser = argparse.ArgumentParser("Porn Fetch CLI - Batch processing")
-            parser.add_argument("--info", help="A help message. READ THIS ON YOUR FIRST RUN!!!!!!!!!!!!!!!!!!!!!!!!",
-                                action="store_true")
-            parser.add_argument("--batch",
-                                help="Whether to start the interactive CLI or batch processing (Read documentation)",
-                                action="store_true")
-            parser.add_argument("--url", help="a Video URL", type=str)
-            parser.add_argument("--model", help="a model URL", type=str)
-            parser.add_argument("--playlist", help="a Playlist URL", type=str)
-            parser.add_argument("--output", help="the path to a folder where to save the downloaded videos",
-                                type=str, default=os.getcwd())
-            parser.add_argument("--quality", help="The quality of the videos", default="best",
-                                choices=["best", "half", "worst"], type=str)
-            parser.add_argument("--threading_mode", help="the threading mode", default="threaded",
-                                choices=["threaded", "ffmpeg", "default"], type=str)
-            parser.add_argument("--ignore_errors", help="Whether to ignore errors during downloads",
-                                action="store_false")
-            parser.add_argument("--auto_process", help="Whether to automatically download all videos from playlists,"
-                                                       "files, models or ask you to select each videos individually",
-                                action="store_true")
-
-            args = parser.parse_args()
-
-            if args.info:
-                print(description)
-                exit(0)
-
-            if args.batch is False:
-                CLI().init()
-
-            url = args.url
-            model = args.model
-            playlist = args.playlist
-            quality = args.quality
-            threading_mode = args.threading_mode
-            output = args.output
-            ignore = args.ignore_errors
-            auto_process = args.auto_process
-
-            print("Checking and loading configuration...")
-            try:
-                self.conf = configparser.ConfigParser()
-                self.conf.read("config.ini")
-                self.load_user_settings()
-
-            except Exception as e:
-                print(f"Error in loading configuration..., creating a new configuration file... Error:")
-                logger.error(e)
-                setup_config_file(force=True)
-                self.conf = configparser.ConfigParser()
-                self.conf.read("config.ini")
-                self.load_user_settings()
-
-            # Overriding the values from configuration file with CLI values
-            self.quality = quality
-            self.threading_mode = threading_mode
-            self.output_path = output
-
-            if url:
-                print(f"{Fore.LIGHTGREEN_EX}[+]{Fore.LIGHTCYAN_EX}Downloading URL -->: {url}")
-                self.process_video(url=url, batch=True)
-
-            if model:
-                print(f"{Fore.LIGHTGREEN_EX}[+]{Fore.LIGHTYELLOW_EX}Processing model -->: {model}")
-                if auto_process:
-                    print(f"{Fore.LIGHTGREEN_EX}[+]{Fore.LIGHTMAGENTA_EX}! Using auto processing !")
-
-                self.process_model(url=model, auto=auto_process, ignore_errors=ignore, batch=True)
-
-            if playlist:
-                print(f"{Fore.LIGHTGREEN_EX}[+]{Fore.LIGHTBLUE_EX}Processing Playlist -->: {playlist}")
-                if auto_process:
-                    print(f"{Fore.LIGHTGREEN_EX}[+]{Fore.LIGHTMAGENTA_EX}! Using auto processing !")
-
-                self.process_playlist(url=playlist, auto=auto_process, ignore_errors=ignore, batch=True)
-
-
-
-
-if __name__ == '__main__':
-    Batch()
-
-
-
-
-
+            model = hq_Client().get_videos_by_actress(model
