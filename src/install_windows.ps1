@@ -19,10 +19,10 @@ cd ..\src
 
 # Use pyinstaller to create an executable
 Write-Output "Creating executable using pyinstaller..."
-pyinstaller --onefile main.py
+pyinstaller --onefile phdlgui.py  # Update this line with the correct script name
 
 # Check if the executable was created successfully
-if (Test-Path -Path "..\dist\main.exe") {
+if (Test-Path -Path "..\dist\phdlgui.exe") {  # Update this line with the correct executable name
     Write-Output "Executable was created successfully."
 } else {
     Write-Output "Failed to create the executable."
