@@ -19,10 +19,10 @@ cd ..\src
 
 # Use pyinstaller to create an executable
 Write-Output "Creating executable using pyinstaller..."
-pyinstaller --onefile phdlgui.py  # Update this line with the correct script name
+pyinstaller --onefile Porn_Fetch_CLI.py  # Update this line with the correct script name
 
 # Check if the executable was created successfully
-if (Test-Path -Path "..\dist\phdlgui.exe") {  # Update this line with the correct executable name
+if (Test-Path -Path "..\dist\Porn_Fetch_CLI.exe") {  # Update this line with the correct executable name
     Write-Output "Executable was created successfully."
 } else {
     Write-Output "Failed to create the executable."
