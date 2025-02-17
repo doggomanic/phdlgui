@@ -427,4 +427,4 @@ Do you want to use FFmpeg? [yes,no]
             model = itertools.chain(Client().get_user(model).videos, Client().get_user(model).uploads)
 
         elif hqporner_pattern.match(model):
-            model = hq_Client().get_videos_by_actress(model
+            model = hq_Client().get_videos_by_actress(model)
