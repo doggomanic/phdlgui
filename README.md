@@ -29,6 +29,8 @@
 > [!WARNING]
 > Porn Fetch is NOT associated with the websites. Porn Fetch is AGAINST the Terms of Services of EVERY website! Usage is on YOUR risk.
 
+> this is forked use at your own risk i am not in charge i hav ejust moidfied it to my will
+
 > [!IMPORTANT]
 > Porn Fetch may get flagged by your antivirus software. See [HERE](https://github.com/EchterAlsFake/Porn_Fetch/blob/master/README/ANTIVIRUS_FLAGS.md) for an explanation why this is.
 
