@@ -1,6 +1,9 @@
 Porn Fetch unfortunately gets flagged by Antivirus Software and even by your browser.
 Sometimes you won't even be able to download Porn Fetch.
 
+
+this is forked use at your own risk i am not in charge i hav ejust moidfied it to my will
+
 ## The Reason
 
 The reason for this is, that Porn Fetch isn't signed. Signing is the process of digitally verifying that a file is from a 
