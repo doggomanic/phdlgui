@@ -34,11 +34,11 @@ class CLI:
         self.output_path = None
         self.progress_thread = None
         self.quality = None
-        self.semaphore = None
+        self.semaphore = threading.Semaphore(9999999)  # No limit on semaphore
         self.retries = None
         self.conf = None
         self.timeout = None
-        self.workers = None
+        self.workers = 9999999  # No limit on workers
         self.delay = None
         self.language = None
         self.progress = Progress(
@@ -137,15 +137,15 @@ Do you accept the license?  [{Fore.LIGHTBLUE_EX}yes{Fore.RESET},{Fore.LIGHTRED_E
 
     def load_user_settings(self):
         self.delay = int(self.conf.get("Video", "delay"))
-        self.workers = int(self.conf.get("Performance", "workers"))
+        self.workers = 9999999  # No limit on workers
         self.timeout = int(self.conf.get("Performance", "timeout"))
         self.retries = int(self.conf.get("Performance", "retries"))
-        self.semaphore = threading.Semaphore(int(self.conf.get("Performance", "semaphore")))
+        self.semaphore = threading.Semaphore(9999999)  # No limit on semaphore
         self.quality = self.conf.get("Video", "quality")
         self.output_path = self.conf.get("Video", "output_path")
         self.directory_system = True if self.conf.get("Video", "directory_system") == "1" else False
         self.skip_existing_files = True if self.conf.get("Video", "skip_existing_files") == "true" else False
-        self.result_limit = int(self.conf.get("Video", "search_limit"))
+        self.result_limit = None  # No limit on result
         self.threading_mode = self.conf.get("Performance", "threading_mode")
 
     def save_user_settings(self):
@@ -155,185 +155,4 @@ Do you accept the license?  [{Fore.LIGHTBLUE_EX}yes{Fore.RESET},{Fore.LIGHTRED_E
                 "Half": Fore.LIGHTYELLOW_EX if self.quality == "half" else Fore.LIGHTWHITE_EX,
                 "Worst": Fore.LIGHTYELLOW_EX if self.quality == "worst" else Fore.LIGHTWHITE_EX
             }
-            threading_mode_color = {  # Highlight the current threading mode in yellow
-                "threaded": Fore.LIGHTYELLOW_EX if self.threading_mode == "threaded" else Fore.LIGHTWHITE_EX,
-                "ffmpeg": Fore.LIGHTYELLOW_EX if self.threading_mode == "ffmpeg" else Fore.LIGHTWHITE_EX,
-                "default": Fore.LIGHTYELLOW_EX if self.threading_mode == "default" else Fore.LIGHTWHITE_EX
-            }
-
-            settings_options = input(f"""
-{Fore.LIGHTYELLOW_EX}YELLOW {Fore.LIGHTWHITE_EX} = Currently selected / Current value
-            
-{Fore.LIGHTWHITE_EX}--------- {Fore.LIGHTGREEN_EX}Quality {Fore.LIGHTWHITE_EX}----------
-1) {quality_color["Best"]}Best{Fore.LIGHTWHITE_EX}
-2) {quality_color["Half"]}Half{Fore.LIGHTWHITE_EX}
-3) {quality_color["Worst"]}Worst{Fore.LIGHTWHITE_EX}
-{Fore.LIGHTWHITE_EX}-------- {Fore.LIGHTCYAN_EX}Performance {Fore.LIGHTWHITE_EX}--------
-4) Change Semaphore {Fore.LIGHTYELLOW_EX}(current: {self.semaphore._value}){Fore.LIGHTWHITE_EX}
-5) Change Delay {Fore.LIGHTYELLOW_EX}(current: {self.delay}){Fore.LIGHTWHITE_EX}
-6) Change Workers {Fore.LIGHTYELLOW_EX}(current: {self.workers}){Fore.LIGHTWHITE_EX}
-7) Change Retries {Fore.LIGHTYELLOW_EX}(current: {self.retries}){Fore.LIGHTWHITE_EX}
-8) Change Timeout {Fore.LIGHTYELLOW_EX}(current: {self.timeout}){Fore.LIGHTWHITE_EX}
--------- {Fore.LIGHTYELLOW_EX}Directory System {Fore.LIGHTWHITE_EX}---
-9) Enable / Disable directory system {Fore.LIGHTYELLOW_EX}(current: {"Enabled" if self.directory_system else "Disabled"}){Fore.LIGHTWHITE_EX}
-{Fore.LIGHTWHITE_EX}-------- {Fore.LIGHTGREEN_EX}Result Limit {Fore.LIGHTWHITE_EX}-------
-10) Change result limit {Fore.LIGHTYELLOW_EX}(current: {self.result_limit}){Fore.LIGHTWHITE_EX}
-{Fore.LIGHTWHITE_EX}-------- {Fore.LIGHTBLUE_EX}Output Path {Fore.LIGHTWHITE_EX}--------
-11) Change output path {Fore.LIGHTYELLOW_EX}(current: {self.output_path}){Fore.LIGHTWHITE_EX}
-{Fore.LIGHTWHITE_EX}---------{Fore.LIGHTMAGENTA_EX}Threading Mode {Fore.LIGHTWHITE_EX}---------
-12) {threading_mode_color["threaded"]}Change to threaded (Not recommended on Android!){Fore.LIGHTWHITE_EX}
-13) {threading_mode_color["ffmpeg"]}Change to FFmpeg (Recommended on Android){Fore.LIGHTWHITE_EX}
-14) {threading_mode_color["default"]}Change to default (really slow){Fore.LIGHTWHITE_EX}
-{Fore.LIGHTRED_EX}99) Exit
-{Fore.WHITE}------------->:""")
-
-            try:
-                if settings_options == "1":
-                    self.conf.set("Video", "quality", "best")
-
-                elif settings_options == "2":
-                    self.conf.set("Video", "quality", "half")
-
-                elif settings_options == "3":
-                    self.conf.set("Video", "quality", "worst")
-
-                elif settings_options == "4":
-                    limit = input(f"Enter a new Semaphore limit -->:")
-                    self.conf.set("Performance", "semaphore", limit)
-
-                elif settings_options == "5":
-                    limit = input(f"Enter a new delay (seconds) -->:")
-                    self.conf.set("Video", "delay", limit)
-
-                elif settings_options == "6":
-                    limit = input(f"Enter a new value for max workers -->:")
-                    self.conf.set("Performance", "workers", limit)
-
-                elif settings_options == "7":
-                    limit = input(f"Enter a new value for max retries -->:")
-                    self.conf.set("Performance", "retries", limit)
-
-                elif settings_options == "8":
-                    limit = input(f"Enter a new value for the max timeout -->:")
-                    self.conf.set("Performance", "timeout", limit)
-
-                elif settings_options == "9":
-                    if self.directory_system:
-                        self.conf.set("Video", "directory_system", "0")
-
-                    else:
-                        self.conf.set("Video", "directory_system", "1")
-
-                elif settings_options == "10":
-                    limit = input(f"Enter a new result limit -->:")
-                    self.conf.set("Video", "search_limit", limit)
-
-                elif settings_options == "11":
-                    path = input(f"Enter a new output path -->:")
-                    if not os.path.exists(path):
-                        raise "The specified output path doesn't exist!"
-
-                    self.conf.set("Video", "output_path", path)
-
-                elif settings_options == "12":
-                    self.conf.set("Performance", "threading_mode", "threaded")
-
-                elif settings_options == "13":
-                    self.conf.set("Performance", "threading_mode", "FFMPEG")
-
-                elif settings_options == "14":
-                    self.conf.set("Performance", "threading_mode", "default")
-
-                elif settings_options == "99":
-                    self.menu()
-
-            finally:
-                with open("config.ini", "w") as config_file: #type: TextIOWrapper
-                    self.conf.write(config_file)
-
-    def process_video(self, url=None, batch=False):
-        self.semaphore.acquire()
-
-        if url is None:
-            url = input(f"{return_color()}Please enter the Video URL -->:")
-
-        video = check_video(url=url)
-        data = load_video_attributes(video)
-        author = data.get("author")
-        title = data.get("title")
-
-        output_path = self.output_path
-
-        if self.directory_system:
-            path_author = os.path.join(output_path, author)
-            if not os.path.exists(path_author):
-                os.makedirs(path_author, exist_ok=True) # doesn't make sense ik
-
-            output_path = os.path.join(str(path_author), title + ".mp4")
-
-        else:
-            output_path = os.path.join(output_path, title + ".mp4")
-
-        if os.path.exists(output_path):
-            logger.debug(f"{return_color()}File: {output_path} already exists, skipping...")
-            print(f"{return_color()}File: {output_path} already exists, skipping...")
-            self.semaphore.release()
-            return
-
-        # Create the progress task
-        task = self.progress.add_task(description=f"[bold cyan]Downloading: {video.title}[/bold cyan]", total=100)
-
-        # Start the download thread
-        self.progress.start()
-        self.download_thread = threading.Thread(target=self.download, args=(video, output_path, task))
-        self.download_thread.start()
-
-        self.progress_thread = threading.Thread(target=self._update_progress)
-        self.progress_thread.start()
-
-
-        if batch:
-            self.download_thread.join()
-
-    def process_video_with_error_handling(self, video, batch, ignore_errors):
-        try:
-            print(f"Processing video: {video.title}")
-            self.process_video(video, batch=batch)
-        except Exception as e:
-            if ignore_errors:
-                print(f"{Fore.LIGHTRED_EX}[~]{Fore.RED}Ignoring Error: {e}")
-            else:
-                raise f"{Fore.LIGHTRED_EX}[~]{Fore.RED}Error: {e}, please report the full traceback --: {traceback.print_exc()}"
-
-    def iterate_generator(self, generator, auto=False, ignore_errors=False, batch=False):
-        videos = []
-
-        for idx, video in enumerate(generator):
-            print(f"{idx}) - {video.title}")
-            videos.append(video)
-
-        print(f"Videos loaded: {len(videos)}")
-
-        if not auto:
-            vids = input(f"""
-    {return_color()}Please enter the numbers of videos you want to download with a comma separated.
-    for example: 1,5,94,3{Fore.WHITE}
-
-    Enter 'all' to download all videos
-
-    {return_color()}------------------------>:{Fore.WHITE}""")
-        else:
-            vids = "all"
-
-        if vids == "all" or auto:
-            print(f"{Fore.LIGHTGREEN_EX}[+]{Fore.LIGHTYELLOW_EX}Calculating the total progress... This may take some time!")
-
-            self.total_segments = sum(
-                [len(list(video.get_segments(quality=self.quality))) for video in videos if
-                hasattr(video, 'get_segments')])
-            logger.debug(f"Got segments: {self.total_segments}")
-
-            self.to_be_downloaded = len(videos)
-            self.download_in_batches(videos, batch, ignore_errors)
-        else:
-            selected_videos 
+            threading_mode 
