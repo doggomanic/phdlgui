@@ -2,11 +2,9 @@ import configparser
 import os.path
 import shutil
 import threading
-import argparse
 import phub.consts
 import traceback
 import itertools
-
 import queue
 from io import TextIOWrapper
 from src.backend.shared_functions import *
@@ -14,10 +12,8 @@ from src.backend.log_config import setup_logging
 from base_api.modules.progress_bars import *
 from base_api.base import BaseCore
 from rich import print as rprint
-from rich.markdown import Markdown
 from rich.progress import Progress, BarColumn, TextColumn, SpinnerColumn, TimeElapsedColumn, TimeRemainingColumn
 from colorama import *
-from hue_shift import return_color
 from base_api import base
 
 base.disable_logging()
@@ -55,7 +51,6 @@ class CLI:
             SpinnerColumn(spinner_name="dots")
         )
         self.task_total_progres = self.progress.add_task("[progress.description]{task.description}", total=self.total_segments)
-        # Please just don't ask, thank you :)
 
     def init(self):
         while True:
@@ -341,44 +336,4 @@ Do you accept the license?  [{Fore.LIGHTBLUE_EX}yes{Fore.RESET},{Fore.LIGHTRED_E
             self.to_be_downloaded = len(videos)
             self.download_in_batches(videos, batch, ignore_errors)
         else:
-            selected_videos = vids.split(",")
-            videos_ = []
-            for number in selected_videos:
-                videos_.append(videos[int(number)])
-
-            self.total_segments = sum(
-                [len(list(video.get_segments(quality=self.quality))) for video in videos_ if
-                hasattr(video, 'get_segments')])
-
-            self.to_be_downloaded = len(selected_videos)
-            self.download_in_batches(videos_, batch, ignore_errors)
-
-    def download_in_batches(self, videos, batch, ignore_errors):
-        for i in range(0, len(videos), 10):
-            batch_videos = videos[i:i + 10]
-            threads = []
-            for video in batch_videos:
-                thread = threading.Thread(target=self.process_video_with_error_handling, args=(video, batch, ignore_errors))
-                threads.append(thread)
-                thread.start()
-            for thread in threads:
-                thread.join()
-
-    def process_model(self, url=None, do_return=False, auto=False, ignore_errors=False, batch=False):
-        if url is None:
-            model = input(f"{return_color()}Enter the model URL -->:")
-
-        else:
-            model = url
-
-        if eporner_pattern.search(model):
-            model = ep_Client().get_pornstar(model, enable_html_scraping=True).videos(pages=10)
-
-        elif xnxx_pattern.match(model):
-            model = xn_Client().get_user(model).videos
-
-        elif pornhub_pattern.match(model):
-            model = itertools.chain(Client().get_user(model).videos, Client().get_user(model).uploads)
-
-        elif hqporner_pattern.match(model):
-            model = hq_Client().get_videos_by_actress(model)
+            selected_videos 
