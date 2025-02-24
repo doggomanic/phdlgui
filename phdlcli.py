@@ -45,8 +45,6 @@ class CLI:
         self.workers = None
         self.delay = None
         self.language = None
-        self.ffmpeg_features = True
-        self.ffmpeg_path = None
         self.progress = Progress(
             TextColumn("[progress.description]{task.description}", style="bold cyan"),  # Display task description here
             TextColumn("[progress.percentage]{task.percentage:>3.0f}%", style="bold cyan"),
@@ -65,7 +63,6 @@ class CLI:
             self.conf = ConfigParser()
             self.conf.read("config.ini")
             self.license()
-            self.ffmpeg_recommendation()
             self.load_user_settings()
             self.menu()
 
@@ -143,28 +140,6 @@ Do you accept the license?  [{Fore.LIGHTBLUE_EX}yes{Fore.RESET},{Fore.LIGHTRED_E
         elif options == "99":
             sys.exit(0)
 
-    def ffmpeg_recommendation(self):
-        if os.path.exists("/data/data/com.termux/files/home"):
-            ffmpeg = input(f"""
-Hey,
-
-It seems like you are using Termux... I highly recommend you to use FFmpeg as your threading mode, because downloading
-HLS segments is very slow on Android devices, because the processor and the system in general can't handle so many
-threads at the same time.
-
-You can install FFmpeg with: 'apt-get install ffmpeg'
-
-If you accept, Porn Fetch will close and automatically set ffmpeg as your downloader.
-
-Do you want to use FFmpeg? [yes,no]        
-    """)
-
-            if ffmpeg.lower() == "yes":
-                self.conf.set("Performance", "threading_mode", "FFMPEG")
-                with open("config.ini", "w") as config_file: #type: TextIOWrapper
-                    self.conf.write(config_file)
-                    print(f"{Fore.LIGHTGREEN_EX}[+]{Fore.LIGHTYELLOW_EX}Done!")
-
     def load_user_settings(self):
         self.delay = int(self.conf.get("Video", "delay"))
         self.workers = int(self.conf.get("Performance", "workers"))
@@ -177,27 +152,6 @@ Do you want to use FFmpeg? [yes,no]
         self.skip_existing_files = True if self.conf.get("Video", "skip_existing_files") == "true" else False
         self.result_limit = int(self.conf.get("Video", "search_limit"))
         self.threading_mode = self.conf.get("Performance", "threading_mode")
-
-        try:
-            if shutil.which("ffmpeg"):
-                self.ffmpeg_path = shutil.which("ffmpeg")
-
-            else:
-                if os.path.isfile("ffmpeg"):
-                    self.ffmpeg_path = "ffmpeg"
-
-                elif os.path.isfile("ffmpeg.exe"):
-                    self.ffmpeg_path = "ffmpeg.exe"
-
-                else:
-                    logger.warning("FFMPEG wasn't found... Have you extracted it from the .zip file?")
-                    logger.warning("FFMPEG Features won't be available!")
-                    self.ffmpeg_features = False
-        finally:
-            if not self.ffmpeg_path == "":
-                phub.consts.FFMPEG_EXECUTABLE = self.ffmpeg_path
-                bs_consts.FFMPEG_PATH = self.ffmpeg_path
-                self.ffmpeg_features = True
 
     def save_user_settings(self):
         while True:
